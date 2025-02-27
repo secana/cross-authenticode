@@ -12,9 +12,7 @@ pub struct AuthenticodeCertificate {
 
 impl AuthenticodeCertificate {
     pub fn new(certificate: Certificate) -> Result<Self, AuthenticodeError> {
-        let sha1 = sha1_thumbprint(&certificate)?;
-        let sha256 = sha256_thumbprint(&certificate)?;
-
+        let (sha1, sha256) = thumbprints(&certificate)?;
         Ok(Self {
             certificate,
             sha1,
@@ -23,22 +21,15 @@ impl AuthenticodeCertificate {
     }
 }
 
-fn sha1_thumbprint(cert: &Certificate) -> Result<String, AuthenticodeError> {
+fn thumbprints(cert: &Certificate) -> Result<(String, String), AuthenticodeError> {
     let mut bytes = Vec::new();
     let _ = cert.encode_to_vec(&mut bytes)?;
 
-    let mut hasher = Sha1::new();
-    hasher.input(&bytes);
+    let mut sha1_hasher = Sha1::new();
+    sha1_hasher.input(&bytes);
 
-    Ok(hasher.result_str())
-}
+    let mut sha256_hasher = Sha256::new();
+    sha256_hasher.input(&bytes);
 
-fn sha256_thumbprint(cert: &Certificate) -> Result<String, AuthenticodeError> {
-    let mut bytes = Vec::new();
-    let _ = cert.encode_to_vec(&mut bytes);
-
-    let mut hasher = Sha256::new();
-    hasher.input(&bytes);
-
-    Ok(hasher.result_str())
+    Ok((sha1_hasher.result_str(), sha256_hasher.result_str()))
 }
