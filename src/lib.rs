@@ -1,15 +1,16 @@
+mod authenticode_certificate;
 mod error;
 mod win_certificate;
 
+use authenticode_certificate::AuthenticodeCertificate;
 use cms::{
-    cert::x509::{
-        Certificate,
-        der::{Decode, Encode, SliceReader},
+    cert::{
+        CertificateChoices,
+        x509::der::{Decode, SliceReader},
     },
     content_info::ContentInfo,
     signed_data::SignedData,
 };
-use crypto::{digest::Digest, sha1::Sha1, sha2::Sha256};
 use error::AuthenticodeError;
 use object::{LittleEndian, pe::IMAGE_DIRECTORY_ENTRY_SECURITY, read::pe::PeFile64};
 use win_certificate::WinCertificate;
@@ -19,34 +20,8 @@ pub struct AuthenticodeInfo {
     pub certificates: Vec<AuthenticodeCertificate>,
 }
 
-#[derive(Debug)]
-pub struct AuthenticodeCertificate {
-    pub certificate: Certificate,
-    pub sha1: String,
-    pub sha256: String,
-}
-
-fn sha1_thumbprint(cert: &Certificate) -> String {
-    let mut bytes = Vec::new();
-    cert.encode_to_vec(&mut bytes).unwrap();
-
-    let mut hasher = Sha1::new();
-    hasher.input(&bytes);
-
-    hasher.result_str()
-}
-
-fn sha256_thumbprint(cert: &Certificate) -> String {
-    let mut bytes = Vec::new();
-    cert.encode_to_vec(&mut bytes).unwrap();
-
-    let mut hasher = Sha256::new();
-    hasher.input(&bytes);
-
-    hasher.result_str()
-}
-
 pub fn authenticode_info(data: &[u8]) -> Result<AuthenticodeInfo, AuthenticodeError> {
+    // TODO: Support 32-bit PE files
     let pe = PeFile64::parse(data)?;
 
     let security_dir = pe
@@ -55,31 +30,23 @@ pub fn authenticode_info(data: &[u8]) -> Result<AuthenticodeInfo, AuthenticodeEr
     let win_certificate =
         WinCertificate::new(data, security_dir.virtual_address.get(LittleEndian))?;
 
-    let mut reader = SliceReader::new(&win_certificate.certificate)?;
+    let mut reader = SliceReader::new(win_certificate.certificate)?;
     let content_info = ContentInfo::decode(&mut reader)?;
 
     let signed_data = content_info.content.decode_as::<SignedData>()?;
 
-    let certificates = signed_data
+    let authenticode_certificates = signed_data
         .certificates
         .as_ref()
         .ok_or(AuthenticodeError::NoCertificates)?
         .0
         .iter()
         .filter_map(|cert| match cert {
-            cms::cert::CertificateChoices::Certificate(cert) => Some(cert),
+            CertificateChoices::Certificate(cert) => Some(cert),
             _ => None,
         })
-        .collect::<Vec<_>>();
-
-    let authenticode_certificates = certificates
-        .into_iter()
-        .map(|cert| AuthenticodeCertificate {
-            certificate: cert.clone(),
-            sha1: sha1_thumbprint(cert),
-            sha256: sha256_thumbprint(cert),
-        })
-        .collect();
+        .map(|cert| AuthenticodeCertificate::new(cert.to_owned()))
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(AuthenticodeInfo {
         certificates: authenticode_certificates,
