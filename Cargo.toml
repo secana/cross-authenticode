@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cms = "0.2.3"
+cms = { version = "0.2", features = [ "pem", "alloc" ]}
+rust-crypto = "0.2"
 object = "0.36"
