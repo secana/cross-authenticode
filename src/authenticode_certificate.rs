@@ -1,12 +1,16 @@
+use crate::error::AuthenticodeError;
 use cms::cert::x509::{Certificate, der::Encode};
 use crypto::{digest::Digest, sha1::Sha1, sha2::Sha256};
 
-use crate::error::AuthenticodeError;
-
+/// Contains information about an Authenticode certificate.
 #[derive(Debug)]
 pub struct AuthenticodeCertificate {
+    /// The certificate itself, with all the information,
+    /// e.g. Subject, Issuer etc.
     pub certificate: Certificate,
+    /// The SHA1 thumbprint of the certificate.
     pub sha1: String,
+    /// The SHA256 thumbprint of the certificate.
     pub sha256: String,
 }
 
@@ -25,6 +29,7 @@ impl AuthenticodeCertificate {
     }
 }
 
+/// Tries to convert a CMS certificate to an Authenticode certificate.
 impl TryFrom<Certificate> for AuthenticodeCertificate {
     type Error = AuthenticodeError;
 

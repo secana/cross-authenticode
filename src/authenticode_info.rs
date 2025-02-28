@@ -8,11 +8,14 @@ use cms::{
     content_info::ContentInfo,
     signed_data::SignedData,
 };
-use object::read::pe::{PeFile, PeFile32};
-use object::{LittleEndian, pe::IMAGE_DIRECTORY_ENTRY_SECURITY, read::pe::PeFile64};
+use object::{
+    LittleEndian, pe::IMAGE_DIRECTORY_ENTRY_SECURITY, read::pe::PeFile32, read::pe::PeFile64,
+};
 
+/// Contains information about the Authenticode signature of a PE file.
 #[derive(Debug)]
 pub struct AuthenticodeInfo {
+    /// List of certificates with additional information found in the PE file.
     pub certificates: Vec<AuthenticodeCertificate>,
 }
 
@@ -70,6 +73,7 @@ impl AuthenticodeInfo {
     }
 }
 
+/// Tries to create an `AuthenticodeInfo` struct from a slice of bytes.
 impl TryFrom<&[u8]> for AuthenticodeInfo {
     type Error = AuthenticodeError;
 
@@ -78,6 +82,7 @@ impl TryFrom<&[u8]> for AuthenticodeInfo {
     }
 }
 
+/// Tries to create an `AuthenticodeInfo` struct from a vector of bytes.
 impl TryFrom<&Vec<u8>> for AuthenticodeInfo {
     type Error = AuthenticodeError;
 
@@ -160,6 +165,39 @@ mod tests {
         assert_eq!(
             ai.certificates[1].sha256,
             "e8e95f0733a55e8bad7be0a1413ee23c51fcea64b3c8fa6a786935fddcc71961"
+        );
+    }
+
+    #[test]
+    fn no_cert_unsigned_32() {
+        let pe_path = PathBuf::from("test-pe/test-unsigned-32.bin");
+        let pe_file = std::fs::read(pe_path).unwrap();
+
+        let error = AuthenticodeInfo::try_from(&pe_file).err().unwrap();
+
+        assert_eq!(error, AuthenticodeError::NoWinCertificate);
+    }
+
+    #[test]
+    fn no_cert_unsigned_64() {
+        let pe_path = PathBuf::from("test-pe/test-unsigned-64.bin");
+        let pe_file = std::fs::read(pe_path).unwrap();
+
+        let error = AuthenticodeInfo::try_from(&pe_file).err().unwrap();
+
+        assert_eq!(error, AuthenticodeError::NoWinCertificate);
+    }
+
+    #[test]
+    fn not_a_pe_file() {
+        let pe_path = PathBuf::from("test-pe/test-no-pe.bin");
+        let pe_file = std::fs::read(pe_path).unwrap();
+
+        let error = AuthenticodeInfo::try_from(&pe_file).err().unwrap();
+
+        assert_eq!(
+            error,
+            AuthenticodeError::ParsePe("Invalid DOS header size or alignment".to_string())
         );
     }
 }
