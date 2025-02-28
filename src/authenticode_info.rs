@@ -8,6 +8,7 @@ use cms::{
     content_info::ContentInfo,
     signed_data::SignedData,
 };
+use object::read::pe::{PeFile, PeFile32};
 use object::{LittleEndian, pe::IMAGE_DIRECTORY_ENTRY_SECURITY, read::pe::PeFile64};
 
 #[derive(Debug)]
@@ -34,12 +35,15 @@ impl AuthenticodeInfo {
     }
 
     fn win_certificate(data: &[u8]) -> Result<WinCertificate, AuthenticodeError> {
-        // TODO: Support 32-bit PE files
-        let pe = PeFile64::parse(data)?;
+        let security_dir = match PeFile64::parse(data) {
+            Ok(pe) => pe
+                .data_directory(IMAGE_DIRECTORY_ENTRY_SECURITY)
+                .ok_or(AuthenticodeError::NoWinCertificate)?,
+            Err(_) => PeFile32::parse(data)?
+                .data_directory(IMAGE_DIRECTORY_ENTRY_SECURITY)
+                .ok_or(AuthenticodeError::NoWinCertificate)?,
+        };
 
-        let security_dir = pe
-            .data_directory(IMAGE_DIRECTORY_ENTRY_SECURITY)
-            .ok_or(AuthenticodeError::NoWinCertificate)?;
         let win_certificate =
             WinCertificate::new(data, security_dir.virtual_address.get(LittleEndian))?;
 
@@ -88,8 +92,8 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn compute_thumbprints() {
-        let pe_path = PathBuf::from("test-pe/test.bin");
+    fn sha1_thumbprints_signed_64() {
+        let pe_path = PathBuf::from("test-pe/test-signed-64.bin");
         let pe_file = std::fs::read(pe_path).unwrap();
 
         let ai = AuthenticodeInfo::try_from(&pe_file).unwrap();
@@ -100,12 +104,58 @@ mod tests {
             "f55115d2439ce0a7529ffaaea654be2c71dce955"
         );
         assert_eq!(
+            ai.certificates[1].sha1,
+            "580a6f4cc4e4b669b9ebdc1b2b3e087b80d0678d"
+        );
+    }
+
+    #[test]
+    fn sha256_thumbprints_signed_64() {
+        let pe_path = PathBuf::from("test-pe/test-signed-64.bin");
+        let pe_file = std::fs::read(pe_path).unwrap();
+
+        let ai = AuthenticodeInfo::try_from(&pe_file).unwrap();
+
+        assert_eq!(ai.certificates.len(), 2);
+        assert_eq!(
             ai.certificates[0].sha256,
             "9267a08c9fc07b6ab194dc4df3121b264e825330a39ffc42cdb0942f5115eb97"
         );
         assert_eq!(
+            ai.certificates[1].sha256,
+            "e8e95f0733a55e8bad7be0a1413ee23c51fcea64b3c8fa6a786935fddcc71961"
+        );
+    }
+
+    #[test]
+    fn sha1_thumbprints_signed_32() {
+        let pe_path = PathBuf::from("test-pe/test-signed-32.bin");
+        let pe_file = std::fs::read(pe_path).unwrap();
+
+        let ai = AuthenticodeInfo::try_from(&pe_file).unwrap();
+
+        assert_eq!(ai.certificates.len(), 2);
+        assert_eq!(
+            ai.certificates[0].sha1,
+            "aeb9b61e47d91c42fff213992b7810a3d562fb12"
+        );
+        assert_eq!(
             ai.certificates[1].sha1,
             "580a6f4cc4e4b669b9ebdc1b2b3e087b80d0678d"
+        );
+    }
+
+    #[test]
+    fn sha256_thumbprints_signed_32() {
+        let pe_path = PathBuf::from("test-pe/test-signed-32.bin");
+        let pe_file = std::fs::read(pe_path).unwrap();
+
+        let ai = AuthenticodeInfo::try_from(&pe_file).unwrap();
+
+        assert_eq!(ai.certificates.len(), 2);
+        assert_eq!(
+            ai.certificates[0].sha256,
+            "bb91b9f1a11556a6556a804d0b5c984c3d1281a04dc918ab7b0a90d8b0747fde"
         );
         assert_eq!(
             ai.certificates[1].sha256,
