@@ -1,7 +1,14 @@
 [package]
 name = "cross-authenticode"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2024"
+description = "Cross-platform XDG Base Directory Specification implementation"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/secana/cross-authenticode"
+readme = "README.md"
+keywords = ["authenticode", "certificate", "pefile"]
+authors = ["Stefan Hausotte"]
+documentation = "https://docs.rs/cross-authenticode"
 
 [dependencies]
 cms = "0.2"
