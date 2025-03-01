@@ -1,7 +1,8 @@
 use crate::error::AuthenticodeError;
 use cms::cert::x509::{Certificate, der::Encode};
-use sha1::{Sha1, Digest};
+use sha1::{Digest, Sha1};
 use sha2::Sha256;
+use std::fmt::Write;
 
 /// Contains information about an Authenticode certificate.
 #[derive(Debug)]
@@ -16,22 +17,31 @@ pub struct AuthenticodeCertificate {
 }
 
 impl AuthenticodeCertificate {
-    fn thumbprints(cert: &Certificate) -> Result<(String, String), AuthenticodeError> {
+    fn to_bytes(cert: &Certificate) -> Result<Vec<u8>, AuthenticodeError> {
         let mut bytes = Vec::new();
         let _ = cert.encode_to_vec(&mut bytes)?;
-        
-        
+        Ok(bytes)
+    }
+
+    fn compute_sha1(bytes: &[u8]) -> String {
         let mut hasher = Sha1::new();
-        hasher.update(&bytes);
+        hasher.update(bytes);
         let result = hasher.finalize();
-        let sha1: String = result.iter().map(|byte| format!("{:02x}", byte)).collect();
-        
+        Self::to_hex_string(&result)
+    }
+
+    fn compute_sha256(bytes: &[u8]) -> String {
         let mut hasher = Sha256::new();
-        hasher.update(&bytes);
+        hasher.update(bytes);
         let result = hasher.finalize();
-        let sha256: String = result.iter().map(|byte| format!("{:02x}", byte)).collect();
-        
-        Ok((sha1, sha256))
+        Self::to_hex_string(&result)
+    }
+
+    fn to_hex_string(bytes: &[u8]) -> String {
+        bytes.iter().fold(String::new(), |mut acc, &byte| {
+            write!(&mut acc, "{:02x}", byte).expect("Unable to write");
+            acc
+        })
     }
 }
 
@@ -40,11 +50,11 @@ impl TryFrom<Certificate> for AuthenticodeCertificate {
     type Error = AuthenticodeError;
 
     fn try_from(certificate: Certificate) -> Result<Self, Self::Error> {
-        let (sha1, sha256) = Self::thumbprints(&certificate)?;
+        let bytes = Self::to_bytes(&certificate)?;
         Ok(Self {
             certificate,
-            sha1,
-            sha256,
+            sha1: Self::compute_sha1(&bytes),
+            sha256: Self::compute_sha256(&bytes),
         })
     }
 }
