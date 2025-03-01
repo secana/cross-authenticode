@@ -43,3 +43,6 @@ git tag "$1"
 
 # Push the tag
 git push origin "$1"
+
+# Push the changes
+git push
