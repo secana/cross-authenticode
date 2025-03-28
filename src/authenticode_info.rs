@@ -1,5 +1,9 @@
+use crate::algorithm::Algorithm;
+use crate::pe_file::PeInfo;
+use crate::spc_indirect_data::{SPC_INDIRECT_DATA_OBJID, SpcIndirectDataContent};
 use crate::win_certificate::WinCertificate;
 use crate::{authenticode_certificate::AuthenticodeCertificate, error::AuthenticodeError};
+use cms::cert::x509::spki::ObjectIdentifier;
 use cms::{
     cert::{
         CertificateChoices,
@@ -8,53 +12,87 @@ use cms::{
     content_info::ContentInfo,
     signed_data::SignedData,
 };
-use object::{
-    LittleEndian, pe::IMAGE_DIRECTORY_ENTRY_SECURITY, read::pe::PeFile32, read::pe::PeFile64,
-};
+
+/// Information about the digest of the PE file.
+/// The information includes the algorithm used and the hash,
+/// which are taken from the PE file itself.
+/// ATTENTION: The hash can be wrong and has to be verified by comparing it to the actual hash
+/// of the Authenticode signature.
+#[derive(Debug)]
+pub struct DigestInfo {
+    /// The algorithm used for the Authenticode hash.
+    pub algorithm: Algorithm,
+    /// The hash of the Authenticode signature.
+    pub hash: Vec<u8>,
+}
 
 /// Contains information about the Authenticode signature of a PE file.
 #[derive(Debug)]
 pub struct AuthenticodeInfo {
     /// List of certificates with additional information found in the PE file.
     pub certificates: Vec<AuthenticodeCertificate>,
+    /// Information about the digest of the Authenticode signature file.
+    pub digest: DigestInfo,
 }
 
 impl AuthenticodeInfo {
     fn create(data: &[u8]) -> Result<AuthenticodeInfo, AuthenticodeError> {
-        let win_certificate = Self::win_certificate(data)?;
-        let signed_data = Self::signed_data(&win_certificate)?;
-        let authenticode_certificates = Self::certificates(signed_data)?;
+        let pe_info = PeInfo::new(data)?;
+        let content_info = Self::content_info(&pe_info.win_certificate)?;
+        let signed_data = Self::signed_data(&content_info)?;
+        let authenticode_certificates = Self::certificates(&signed_data)?;
+        let digest_info = Self::digest_info(&content_info, &signed_data)?;
 
         Ok(AuthenticodeInfo {
             certificates: authenticode_certificates,
+            digest: digest_info,
         })
     }
 
-    fn signed_data(win_certificate: &WinCertificate) -> Result<SignedData, AuthenticodeError> {
-        let mut reader = SliceReader::new(win_certificate.certificate)?;
-        let content_info = ContentInfo::decode(&mut reader)?;
+    fn digest_info(
+        content_info: &ContentInfo,
+        signed_data: &SignedData,
+    ) -> Result<DigestInfo, AuthenticodeError> {
+        if content_info.content_type != ObjectIdentifier::new_unwrap("1.2.840.113549.1.7.2") {
+            return Err(AuthenticodeError::InvalidContentType(
+                content_info.content_type.to_string(),
+            ));
+        }
+
+        if signed_data.encap_content_info.econtent_type != SPC_INDIRECT_DATA_OBJID {
+            return Err(AuthenticodeError::InvalidEncapsulatedContentType(
+                signed_data.encap_content_info.econtent_type.to_string(),
+            ));
+        }
+
+        let indirect_data = signed_data
+            .clone()
+            .encap_content_info
+            .econtent
+            .ok_or(AuthenticodeError::NoEncapsulatedContent)?
+            .decode_as::<SpcIndirectDataContent>()?;
+
+        let hash = indirect_data.message_digest.digest.as_bytes();
+
+        Ok(DigestInfo {
+            algorithm: Algorithm::try_from(hash)?,
+            hash: hash.to_vec(),
+        })
+    }
+
+    fn signed_data(content_info: &ContentInfo) -> Result<SignedData, AuthenticodeError> {
         let signed_data = content_info.content.decode_as::<SignedData>()?;
         Ok(signed_data)
     }
 
-    fn win_certificate(data: &[u8]) -> Result<WinCertificate, AuthenticodeError> {
-        let security_dir = match PeFile64::parse(data) {
-            Ok(pe) => pe
-                .data_directory(IMAGE_DIRECTORY_ENTRY_SECURITY)
-                .ok_or(AuthenticodeError::NoWinCertificate)?,
-            Err(_) => PeFile32::parse(data)?
-                .data_directory(IMAGE_DIRECTORY_ENTRY_SECURITY)
-                .ok_or(AuthenticodeError::NoWinCertificate)?,
-        };
-
-        let win_certificate =
-            WinCertificate::new(data, security_dir.virtual_address.get(LittleEndian))?;
-
-        Ok(win_certificate)
+    fn content_info(win_certificate: &WinCertificate) -> Result<ContentInfo, AuthenticodeError> {
+        let mut reader = SliceReader::new(win_certificate.certificate)?;
+        let content_info = ContentInfo::decode(&mut reader)?;
+        Ok(content_info)
     }
 
     fn certificates(
-        signed_data: SignedData,
+        signed_data: &SignedData,
     ) -> Result<Vec<AuthenticodeCertificate>, AuthenticodeError> {
         let authenticode_certificates = signed_data
             .certificates
@@ -112,6 +150,7 @@ mod tests {
             ai.certificates[1].sha1,
             "580a6f4cc4e4b669b9ebdc1b2b3e087b80d0678d"
         );
+        assert_eq!(ai.digest.algorithm, Algorithm::Sha256);
     }
 
     #[test]
@@ -130,6 +169,7 @@ mod tests {
             ai.certificates[1].sha256,
             "e8e95f0733a55e8bad7be0a1413ee23c51fcea64b3c8fa6a786935fddcc71961"
         );
+        assert_eq!(ai.digest.algorithm, Algorithm::Sha256);
     }
 
     #[test]
@@ -148,6 +188,7 @@ mod tests {
             ai.certificates[1].sha1,
             "580a6f4cc4e4b669b9ebdc1b2b3e087b80d0678d"
         );
+        assert_eq!(ai.digest.algorithm, Algorithm::Sha256);
     }
 
     #[test]
@@ -166,6 +207,7 @@ mod tests {
             ai.certificates[1].sha256,
             "e8e95f0733a55e8bad7be0a1413ee23c51fcea64b3c8fa6a786935fddcc71961"
         );
+        assert_eq!(ai.digest.algorithm, Algorithm::Sha256);
     }
 
     #[test]

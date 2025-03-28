@@ -4,14 +4,39 @@ use thiserror::Error;
 pub enum AuthenticodeError {
     #[error("failed to read slice from PE file: {0}")]
     ReadSlice(String),
+
     #[error("failed to parse PE file: {0}")]
     ParsePe(String),
+
     #[error("contains no win_certificate")]
     NoWinCertificate,
+
     #[error("no valid DER certificate: {0}")]
     DerError(String),
+
     #[error("no certificates found")]
     NoCertificates,
+
+    #[error("invalid signature: {0}")]
+    InvalidSignature(String),
+
+    #[error("invalid ASN.1 encoding: {0}")]
+    Asn1Error(String),
+
+    #[error("no encapsulated content found")]
+    NoEncapsulatedContent,
+
+    #[error("invalid encapsulated content type: {0}")]
+    InvalidEncapsulatedContentType(String),
+
+    #[error("invalid encapsulated content")]
+    InvalidEncapsulatedContent,
+
+    #[error("invalid content type: {0}")]
+    InvalidContentType(String),
+
+    #[error("invalid hash algorithm")]
+    InvalidHashAlgorithm,
 }
 
 impl From<cms::cert::x509::der::Error> for AuthenticodeError {

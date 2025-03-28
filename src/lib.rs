@@ -19,9 +19,12 @@
 //! assert_eq!(ai.certificates[1].sha1, "580a6f4cc4e4b669b9ebdc1b2b3e087b80d0678d");
 //! ```
 
+mod algorithm;
 mod authenticode_certificate;
 mod authenticode_info;
 mod error;
+mod pe_file;
+mod spc_indirect_data;
 mod win_certificate;
 
 pub use authenticode_info::AuthenticodeInfo;
