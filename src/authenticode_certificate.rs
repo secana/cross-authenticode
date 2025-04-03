@@ -2,7 +2,6 @@ use crate::error::AuthenticodeError;
 use cms::cert::x509::{Certificate, der::Encode};
 use sha1::{Digest, Sha1};
 use sha2::Sha256;
-use std::fmt::Write;
 
 /// Contains information about an Authenticode certificate.
 #[derive(Debug)]
@@ -11,9 +10,9 @@ pub struct AuthenticodeCertificate {
     /// e.g. Subject, Issuer etc.
     pub certificate: Certificate,
     /// The SHA1 thumbprint of the certificate.
-    pub sha1: String,
+    pub sha1: Vec<u8>,
     /// The SHA256 thumbprint of the certificate.
-    pub sha256: String,
+    pub sha256: Vec<u8>,
 }
 
 impl AuthenticodeCertificate {
@@ -23,25 +22,16 @@ impl AuthenticodeCertificate {
         Ok(bytes)
     }
 
-    fn compute_sha1(bytes: &[u8]) -> String {
+    fn compute_sha1(bytes: &[u8]) -> Vec<u8> {
         let mut hasher = Sha1::new();
         hasher.update(bytes);
-        let result = hasher.finalize();
-        Self::to_hex_string(&result)
+        hasher.finalize().to_vec()
     }
 
-    fn compute_sha256(bytes: &[u8]) -> String {
+    fn compute_sha256(bytes: &[u8]) -> Vec<u8> {
         let mut hasher = Sha256::new();
         hasher.update(bytes);
-        let result = hasher.finalize();
-        Self::to_hex_string(&result)
-    }
-
-    fn to_hex_string(bytes: &[u8]) -> String {
-        bytes.iter().fold(String::new(), |mut acc, &byte| {
-            write!(&mut acc, "{:02x}", byte).expect("Unable to write");
-            acc
-        })
+        hasher.finalize().to_vec()
     }
 }
 

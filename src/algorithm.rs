@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::error::AuthenticodeError;
 
 /// The hash algorithm used to sign the PE file.
@@ -21,6 +23,18 @@ impl TryFrom<&[u8]> for Algorithm {
             48 => Ok(Algorithm::Sha384),
             64 => Ok(Algorithm::Sha512),
             _ => Err(AuthenticodeError::InvalidHashAlgorithm),
+        }
+    }
+}
+
+impl Display for Algorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Algorithm::Md5 => write!(f, "MD5"),
+            Algorithm::Sha1 => write!(f, "SHA1"),
+            Algorithm::Sha256 => write!(f, "SHA256"),
+            Algorithm::Sha384 => write!(f, "SHA384"),
+            Algorithm::Sha512 => write!(f, "SHA512"),
         }
     }
 }

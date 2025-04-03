@@ -37,6 +37,9 @@ pub enum AuthenticodeError {
 
     #[error("invalid hash algorithm")]
     InvalidHashAlgorithm,
+
+    #[error("invalid hash algorithm: {0}")]
+    InvalidHashAlgorithmWithName(String),
 }
 
 impl From<cms::cert::x509::der::Error> for AuthenticodeError {
@@ -54,5 +57,23 @@ impl From<std::array::TryFromSliceError> for AuthenticodeError {
 impl From<object::Error> for AuthenticodeError {
     fn from(error: object::Error) -> Self {
         Self::ParsePe(error.to_string())
+    }
+}
+
+pub trait OptionExt<T> {
+    fn err_slice(self) -> Result<T, AuthenticodeError>;
+    fn err_pe_oor(self) -> Result<T, AuthenticodeError>;
+}
+
+impl<T> OptionExt<T> for Option<T> {
+    fn err_slice(self) -> Result<T, AuthenticodeError> {
+        self.ok_or(AuthenticodeError::ReadSlice(
+            "Failed to read slice".to_string(),
+        ))
+    }
+    fn err_pe_oor(self) -> Result<T, AuthenticodeError> {
+        self.ok_or(AuthenticodeError::ParsePe(
+            "Result out of range".to_string(),
+        ))
     }
 }

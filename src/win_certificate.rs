@@ -2,7 +2,7 @@
 use crate::error::AuthenticodeError;
 
 #[derive(Debug)]
-pub(crate) struct WinCertificate<'a> {
+pub struct WinCertificate<'a> {
     pub length: u32,
     pub revision: u16,
     pub certificate_type: u16,
