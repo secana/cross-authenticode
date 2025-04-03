@@ -1,16 +1,13 @@
 # cross-authenticode
 
-    THIS CRATE IS CURRENTLY WORK IN PROGRESS
-    There will be frequent breaking changes until the first 1.*.* release
-
 Cross platform library to check authenticode signatures and certificate hashes of PE files. It's focus is on a seamless cross platform experience, so that you can use the same code on Windows, Linux and macOS.
 
-## Current State
+## Features
 
 - [x] Extract all certificates from a PE file
-- [x] Compute the `SHA-1` and `SHA-256` hash (thumbprint/fingerprint) of a certificate
-- [ ] Find the signing certificate of the PE file from the certificate chain
-- [ ] Verify the signature of a PE file
+- [x] Compute the `SHA-1` and `SHA-256` (or other) hash (thumbprint/fingerprint) of a certificate
+- [x] Verify the signature of a PE file by computing the hash of the file and comparing it to the hash in the signature
+
 
 ## Documentation
 
