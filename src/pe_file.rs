@@ -17,7 +17,7 @@ pub(crate) trait PeFile {
 
     fn offset(&self, bytes: &[u8]) -> Result<usize, AuthenticodeError>;
 
-    fn win_certificate(&self) -> Result<WinCertificate, AuthenticodeError>;
+    fn win_certificate(&self) -> Result<WinCertificate<'_>, AuthenticodeError>;
 
     fn section_data_range(&self, index: usize) -> Result<Range<usize>, AuthenticodeError>;
 }
@@ -112,7 +112,7 @@ where
         ))
     }
 
-    fn win_certificate(&self) -> Result<WinCertificate, AuthenticodeError> {
+    fn win_certificate(&self) -> Result<WinCertificate<'_>, AuthenticodeError> {
         let security_dir = self
             .data_directory(IMAGE_DIRECTORY_ENTRY_SECURITY)
             .ok_or(AuthenticodeError::NoWinCertificate)?;

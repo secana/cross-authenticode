@@ -43,7 +43,7 @@ pub struct AuthenticodeInfo<'a> {
 }
 
 impl AuthenticodeInfo<'_> {
-    fn create(data: &[u8]) -> Result<AuthenticodeInfo, AuthenticodeError> {
+    fn create(data: &[u8]) -> Result<AuthenticodeInfo<'_>, AuthenticodeError> {
         let pe: Box<dyn PeFile> = match PeFile64::parse(data) {
             Ok(pe) => Box::new(pe),
             Err(_) => Box::new(PeFile32::parse(data)?),
