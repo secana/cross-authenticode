@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: "main"
+    ignore:
+      # der is version-locked to cms/x509-cert (both 0.2 -> der 0.7). A major
+      # bump can only land once cms/x509-cert ship der 0.8 on stable, so ignore
+      # major updates here to avoid uncompilable PRs.
+      - dependency-name: "der"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     # Check for updates every Monday
