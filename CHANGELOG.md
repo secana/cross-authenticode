@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3](https://github.com/secana/cross-authenticode/compare/v1.0.2...v1.0.3) - 2026-06-14
+
+### Other
+
+- ignore der major updates in Dependabot
+- auto-approve and auto-merge Dependabot PRs ([#8](https://github.com/secana/cross-authenticode/pull/8))
+- auto-approve and auto-merge Dependabot PRs
+
 ## [1.0.2](https://github.com/secana/cross-authenticode/compare/v1.0.1...v1.0.2) - 2026-04-25
 
 ### Other
