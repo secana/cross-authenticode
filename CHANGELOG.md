@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4](https://github.com/secana/cross-authenticode/compare/v1.0.3...v1.0.4) - 2026-11-02
+
+### Other
+
+- also ignore der 0.x minor updates in Dependabot ([#18](https://github.com/secana/cross-authenticode/pull/18))
+- also ignore der 0.x minor updates in Dependabot
+- release v1.0.3 ([#9](https://github.com/secana/cross-authenticode/pull/9))
+- *(deps)* update object requirement from 0.39 to 0.40
+- *(deps)* bump actions/checkout from 6 to 7
+
 ## [1.0.3](https://github.com/secana/cross-authenticode/compare/v1.0.2...v1.0.3) - 2026-06-14
 
 ### Other
