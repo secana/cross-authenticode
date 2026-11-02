@@ -6,11 +6,12 @@ updates:
       interval: "weekly"
     target-branch: "main"
     ignore:
-      # der is version-locked to cms/x509-cert (both 0.2 -> der 0.7). A major
-      # bump can only land once cms/x509-cert ship der 0.8 on stable, so ignore
-      # major updates here to avoid uncompilable PRs.
+      # der is version-locked to cms/x509-cert (both 0.2 -> der 0.7). A bump to
+      # der 0.8 can only land once cms/x509-cert ship der 0.8 on stable, so
+      # ignore it here to avoid uncompilable PRs. For 0.x crates Dependabot
+      # treats 0.7 -> 0.8 as a *minor* update, so both types must be ignored.
       - dependency-name: "der"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: "github-actions"
     directory: "/"
     # Check for updates every Monday
